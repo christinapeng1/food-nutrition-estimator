@@ -1,0 +1,11 @@
+# Core data
+pandas==3.0.2
+numpy==2.4.4
+
+# Visualization & notebooks
+matplotlib
+pillow
+jupyter
+
+# Google Cloud Storage
+gsutil==5.36

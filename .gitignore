@@ -1,0 +1,7 @@
+# Data — never commit raw or downloaded dataset files
+data/raw/
+*.tar.gz
+
+# Virtual Environment
+venv/
+
