@@ -5,3 +5,9 @@ data/raw/
 # Virtual Environment
 venv/
 
+# Dataset images
+data/sample/imagery/
+
+# Python cache
+__pycache__/
+*.pyc
