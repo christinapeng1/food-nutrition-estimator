@@ -1,11 +1,17 @@
 # Core data
-pandas==3.0.2
-numpy==2.4.4
+pandas
+numpy
+
+# Deep learning
+torch
+torchvision
+
+# Image loading
+pillow
 
 # Visualization & notebooks
 matplotlib
-pillow
 jupyter
 
 # Google Cloud Storage
-gsutil==5.36
+gsutil
