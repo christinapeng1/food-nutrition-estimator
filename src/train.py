@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -46,6 +47,9 @@ vocab    = build_ingredient_vocab(df, top_n=200)
 NUM_INGR = len(vocab)
 print(f"Actual vocab size: {NUM_INGR}")
 print(f"Total dishes with imagery: {len(df)}")
+
+with open("../checkpoints/vocab.json", "w") as f:
+    json.dump(vocab, f)
 
 # Split by official IDs
 train_df = df[df["dish_id"].isin(train_ids)].reset_index(drop=True)

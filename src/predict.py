@@ -1,35 +1,21 @@
 import sys
+import json
 import torch
 from torchvision import transforms
 from PIL import Image
 import pandas as pd
 
 sys.path.append(".")
-from dataset import build_ingredient_vocab
 from cnn import NutritionCNN
 
 # --- Config ---
-CSV_PATH   = "../data/raw/metadata/dish_metadata_cafe1.csv"
 CHECKPOINT = "../checkpoints/best_model.pt"
 
 device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
 
-# --- Build vocab directly from CSV (no imagery needed) ---
-dishes = []
-with open(CSV_PATH) as f:
-    for line in f:
-        parts = line.strip().split(",")
-        ingredients = []
-        offset = 6
-        while offset + 6 < len(parts):
-            if not parts[offset].startswith("ingr_"):
-                break
-            ingredients.append({"ingr_name": parts[offset + 1]})
-            offset += 7
-        dishes.append({"ingredients": ingredients})
-
-df = pd.DataFrame(dishes)
-vocab = build_ingredient_vocab(df, top_n=199)
+# --- Load vocab directly from checkpoints ---
+with open("../checkpoints/vocab.json") as f:
+    vocab = json.load(f)
 NUM_INGR = len(vocab)
 
 # --- Load model ---
