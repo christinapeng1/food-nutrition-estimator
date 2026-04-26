@@ -67,3 +67,24 @@ def test_uncertainty_weighter_clamp():
     losses = {"a": torch.tensor(1.0)}
     total, _ = w(losses)
     assert torch.isfinite(total)
+
+
+def test_masked_huber_correct_average_excludes_masked_positions():
+    """Masked positions must NOT contaminate the average even when their loss would be huge."""
+    pred   = torch.tensor([[2.0, 999.0, 3.0]])    # mid position masked, large fake error
+    target = torch.tensor([[1.0,   5.0, 2.0]])
+    mask   = torch.tensor([[1.0,   0.0, 1.0]])
+    # delta=1.0; pos 0: |1|=1 → quad: 0.5 ; pos 2: |1|=1 → quad: 0.5
+    # average over 2 unmasked positions: (0.5+0.5)/2 = 0.5
+    loss = masked_huber(pred, target, mask, delta=1.0)
+    assert torch.isclose(loss, torch.tensor(0.5))
+
+
+def test_masked_huber_handles_nan_at_masked_positions():
+    """NaN at masked positions must not propagate to the loss."""
+    pred   = torch.tensor([[1.0, 2.0]])
+    target = torch.tensor([[1.0, float("nan")]])
+    mask   = torch.tensor([[1.0, 0.0]])
+    loss = masked_huber(pred, target, mask, delta=1.0)
+    assert torch.isfinite(loss).item()
+    assert torch.isclose(loss, torch.tensor(0.0))

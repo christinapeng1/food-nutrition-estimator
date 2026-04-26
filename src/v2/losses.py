@@ -22,7 +22,8 @@ def masked_huber(pred: torch.Tensor, target: torch.Tensor, mask: torch.Tensor,
         mask:   same shape, 0/1
         delta:  Huber transition point (in target units)
     """
-    diff = (pred - target) * mask
+    target_safe = torch.where(mask.bool(), target, torch.zeros_like(target))
+    diff = (pred - target_safe) * mask
     abs_diff = diff.abs()
     quad = 0.5 * (abs_diff ** 2)
     lin = delta * (abs_diff - 0.5 * delta)
@@ -77,6 +78,11 @@ class UncertaintyWeighter(nn.Module):
         total = torch.zeros((), device=next(iter(losses.values())).device)
         parts: Dict[str, torch.Tensor] = {}
         for name in self.task_names:
+            if name not in losses:
+                raise KeyError(
+                    f"UncertaintyWeighter: task '{name}' not in provided losses dict. "
+                    f"Available: {list(losses.keys())}"
+                )
             s = torch.clamp(self.log_var[name], min=self.s_floor)
             l = losses[name]
             scaled = 0.5 * torch.exp(-s) * l + 0.5 * s
