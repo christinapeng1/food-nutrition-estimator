@@ -125,8 +125,16 @@ def make_loaders(cfg: TrainConfig, vocab: Vocab, stats: TrainStats):
         train_ids = train_ids[:8]; val_ids = val_ids[:8]
 
     md = [cfg.metadata_cafe1, cfg.metadata_cafe2]
+    # In overfit_micro mode, use eval transform on TRAIN too — augmentation is noise that
+    # prevents the model from memorizing 8 specific images. Also use the SAME 8 dishes for
+    # val so we can directly observe whether overfitting succeeded.
+    train_transform = (build_default_eval_transform()
+                       if cfg.overfit_micro
+                       else build_default_train_transform())
+    if cfg.overfit_micro:
+        val_ids = train_ids
     train_ds = Nutrition5kRGBD(train_ids, md, cfg.imagery_root, vocab, stats,
-                               transform=build_default_train_transform(),
+                               transform=train_transform,
                                require_depth=cfg.use_depth)
     val_ds = Nutrition5kRGBD(val_ids, md, cfg.imagery_root, vocab, stats,
                              transform=build_default_eval_transform(),
@@ -257,7 +265,12 @@ def main(cfg: TrainConfig):
 
             # Adjust LR per-param-group for warmup/cosine — backbone + head only.
             # Weighter LR is fixed (see above) so s_t can keep adapting after head LR decays.
-            sched_factor = lr_schedule(step, total_steps, warmup_steps)
+            # For overfit_micro: use constant LR after warmup (cosine would zero out the LR
+            # before the model can finish memorizing the tiny train set).
+            if cfg.overfit_micro:
+                sched_factor = min(1.0, (step + 1) / max(warmup_steps, 1))
+            else:
+                sched_factor = lr_schedule(step, total_steps, warmup_steps)
             for pg, base in zip(optimizer.param_groups[:2], [cfg.lr_backbone, cfg.lr_head]):
                 pg["lr"] = base * sched_factor
 
@@ -339,6 +352,9 @@ def cli():
         cfg.overfit_micro = True
         cfg.n_epochs = 100; cfg.early_stop_patience = 999; cfg.batch_size = 8
         cfg.lr_head = 1e-3; cfg.lr_backbone = 1e-4
+        cfg.log_every = 1     # 1 step per epoch in overfit mode; log every step
+        cfg.bf16 = False      # FP32 for cleaner debugging precision (8 dishes is tiny)
+        cfg.num_workers = 0   # avoid dataloader-worker NFS cleanup tracebacks on tiny set
     main(cfg)
 
 
