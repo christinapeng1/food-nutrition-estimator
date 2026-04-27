@@ -271,17 +271,6 @@ if not torch.isfinite(total):
 
 **Atomic checkpoint**：tmp → rename，防 SLURM 抢占时半写。
 
-### 6.3 6 个 Correctness Gates
-
-| Gate | 时机 | 检查 |
-|---|---|---|
-| G1 | dataset 写完 | 5-dish 可视化 + per-ingredient mass sum ≥ 45/50 |
-| G2 | model 写完 | dummy forward shape；param 116.9M ± 10% |
-| G3 | train 写完 | 8-dish overfit，loss → 0 |
-| G4 | epoch 1 末 | val z-score MAE < 1.0 |
-| G5 | 主 run 完 | test kcal MAE ≤ 70 |
-| G6 | 每 ablation 完 | G1-G4 重跑 + paired bootstrap |
-
 ---
 
 ## 7. 评测
@@ -353,21 +342,6 @@ val 单调下降，结束时仍在降 — **可以再训更久**。
 ### 9.4 启示
 
 未来应**head-specific depth gating**：depth 只进 mass head，弱化对 kcal head 的影响。
-
----
-
-## 10. 关键工程坑点
-
-| # | 坑 | 修复 | 教训 |
-|---|---|---|---|
-| 1 | Depth clip [200,800] 错误（手机 ToF 范围） | 改 [2500, 6000] mm | 写 spec 先**测数据** |
-| 2 | mass head 评测 5× bloated（555 slots × 8g 默认） | 训练 GT mask + 评测 sigmoid mask + headline 只用 direct | 评测前看 prediction 分布 |
-| 3 | Raw-units loss 梯度被 std_kcal 放大 200× | 除以 std_kcal | 所有 loss 同量级 |
-| 4 | torch cu130 wheel 装上但 driver 是 12.9 | 装 cu129 wheel | 先 nvidia-smi 看 driver |
-| 5 | `IFS=$"\t"` 不是 tab | 用 `IFS=$'\t'` | bash 注意 ANSI-C quoting |
-| 6 | EMA decay 0.9999 太慢（窗口 10000 步 vs 训 1900 步） | 评测用 raw model | 短训练用 0.999 |
-| 7 | Overfit_micro 用了增广 + cosine | 强制无增广 + val=train + 常数 LR | overfit test 关掉所有 noise |
-| 8 | ssh + tee 长连接断开导致 log 中断 | nohup + 远程 log + ssh tail -F | 长任务完全 detach |
 
 ---
 
